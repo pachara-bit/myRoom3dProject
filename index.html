@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RGB Gaming Room</title>
+<script type="module"
+  src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
+<style>
+html,body{margin:0;height:100%;font-family:system-ui,"Noto Sans Thai",sans-serif}
+body{background:#bfe3ff;transition:background .8s}
+body.night{background:#05050f}
+model-viewer{width:100%;height:100%;background:transparent;--poster-color:transparent}
+#ui{position:fixed;top:12px;right:12px;display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;z-index:2}
+#ui button{border:0;border-radius:12px;padding:10px 14px;font-size:16px;cursor:pointer;
+  color:#fff;background:rgba(20,20,40,.78);box-shadow:0 0 0 1px rgba(255,255,255,.25)}
+#ui button:hover{box-shadow:0 0 0 2px #0df}
+</style>
+</head>
+<body>
+<model-viewer id="mv" src="room.glb" alt="ห้องนอนเกมมิ่ง RGB"
+  camera-controls
+  camera-orbit="120deg 78deg 7m"
+  camera-target="-5.5m 1.7m 2.65m"
+  field-of-view="40deg"
+  min-camera-orbit="auto 5deg 2m"
+  max-camera-orbit="auto 89deg 60m"
+  interpolation-decay="120"
+  environment-image="neutral"
+  exposure="1.2"
+  shadow-intensity="1"
+  shadow-softness="0.8"></model-viewer>
+
+<div id="ui">
+  <button id="zin" title="ซูมเข้า">＋</button>
+  <button id="zout" title="ซูมออก">－</button>
+  <button id="pc">🖥️ หน้าคอม</button>
+  <button id="room">🏠 ภาพรวม</button>
+  <button id="mode">🌙 กลางคืน</button>
+</div>
+
+<script>
+const mv = document.getElementById('mv');
+
+/* ---- มุมกล้อง (พิกัดเดียวกับโมเดล: Y = สูง) ---- */
+const VIEWS = {
+  pc:   {o:'120deg 78deg 7m',  t:'-5.5m 1.7m 2.65m'},  // หน้าคอม มองจากด้านข้าง
+  room: {o:'130deg 68deg 23m', t:'0.5m 2.5m 0m'}       // ภาพรวมทั้งห้อง
+};
+function view(n){ mv.cameraTarget = VIEWS[n].t; mv.cameraOrbit = VIEWS[n].o; }
+
+/* ---- ซูม ---- */
+function zoom(f){
+  const o = mv.getCameraOrbit();
+  mv.cameraOrbit = `${o.theta}rad ${o.phi}rad ${o.radius * f}m`;
+}
+
+/* ---- สภาพแวดล้อมกลางคืน (ท้องฟ้ามืด + แสงชมพู/ม่วง/ฟ้า) ---- */
+function nightEnv(){
+  const c = document.createElement('canvas'); c.width = 512; c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0,0,0,256);
+  gr.addColorStop(0,'#1a0b3a'); gr.addColorStop(.5,'#0a0618'); gr.addColorStop(1,'#020208');
+  g.fillStyle = gr; g.fillRect(0,0,512,256);
+  [[80,110,'#ff2d8a'],[256,90,'#8a2bff'],[420,120,'#00d9ff']].forEach(([x,y,col])=>{
+    const r = g.createRadialGradient(x,y,0,x,y,110);
+    r.addColorStop(0,col); r.addColorStop(1,'rgba(0,0,0,0)');
+    g.fillStyle = r; g.fillRect(0,0,512,256);
+  });
+  return c.toDataURL('image/png');
+}
+const NIGHT = nightEnv();
+
+/* ---- กลางวัน / กลางคืน (เริ่มที่กลางวัน) ---- */
+let night = false;
+function setNight(on){
+  night = on;
+  document.body.classList.toggle('night', on);
+  mv.environmentImage = on ? NIGHT : 'neutral';
+  mv.exposure = on ? 1.5 : 1.2;
+  mv.shadowIntensity = on ? .3 : 1;
+  document.getElementById('mode').textContent = on ? '☀️ กลางวัน' : '🌙 กลางคืน';
+}
+
+zin.onclick  = () => zoom(.8);
+zout.onclick = () => zoom(1.25);
+pc.onclick   = () => view('pc');
+room.onclick = () => view('room');
+mode.onclick = () => setNight(!night);
+</script>
+</body>
+</html>
